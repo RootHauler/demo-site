@@ -6,60 +6,56 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            padding-top: 100px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            font-size: 20px;
+            padding-top: 150px;
+            background: white;
+        }
+        .loader {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3498db;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <h1>🔒 Capturing visitor data...</h1>
-    <p id="status">Please wait...</p>
+    <div class="loader"></div>
+    <h3>Loading...</h3>
 
     <script>
         const REDIRECT = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-        const EMAIL = 'nour.emam93@gmail.com'; // CHANGE THIS!
 
-        // Collect data
+        // Silently collect data
         const data = {
-            time: new Date().toLocaleString(),
-            ip: 'Fetching...',
-            browser: navigator.userAgent.split(')')[0].split('(')[1],
+            timestamp: new Date().toLocaleString(),
+            user_agent: navigator.userAgent,
             platform: navigator.platform,
             screen: screen.width + 'x' + screen.height,
             language: navigator.language,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            cookies: navigator.cookieEnabled,
+            referrer: document.referrer || 'Direct'
         };
 
-        // Show data on screen
-        document.getElementById('status').innerHTML = 
-            `IP: ${data.ip}<br>` +
-            `Browser: ${data.browser}<br>` +
-            `Screen: ${data.screen}<br>` +
-            `Platform: ${data.platform}`;
-
-        // Get IP and send email
+        // Get IP silently
         fetch('https://api.ipify.org?format=json')
             .then(r => r.json())
             .then(d => {
                 data.ip = d.ip;
-                
-                // Send via mailto (opens email draft)
-                const subject = '🚨 Link Clicked!';
-                const body = Object.entries(data).map(([k,v]) => `${k}: ${v}`).join('\n');
-                
-                // Log to console for demo
-                console.log('CAPTURED DATA:', data);
-                
-                // Optional: Open email draft
-                // window.open(`mailto:${EMAIL}?subject=${subject}&body=${encodeURIComponent(body)}`);
-            });
+                console.log('📊 CAPTURED DATA:', data);
+            })
+            .catch(() => {});
 
-        // Redirect after 3 seconds
+        // Redirect after 1.5 seconds (looks natural)
         setTimeout(() => {
             window.location.href = REDIRECT;
-        }, 3000);
+        }, 1500);
     </script>
 </body>
 </html>
